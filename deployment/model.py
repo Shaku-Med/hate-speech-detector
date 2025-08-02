@@ -7,6 +7,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
 class HateSpeechDetector:
     def __init__(self, max_vocab_size=10000, max_sequence_length=100, embedding_dim=128):
@@ -160,24 +161,31 @@ class HateSpeechDetector:
         if self.model is None:
             raise ValueError("Model not trained yet")
         
-        processed_texts = []
-        for text in texts:
-            from preprocessor import TextPreprocessor
-            preprocessor = TextPreprocessor()
-            processed_texts.append(preprocessor.preprocess_text(text))
-        
-        sequences = []
-        for text in processed_texts:
-            sequence = []
-            words = text.split()
-            for word in words:
-                sequence.append(self.vocabulary.get(word, self.vocabulary['<UNK>']))
-            sequences.append(sequence)
-        
-        X = pad_sequences(sequences, maxlen=self.max_sequence_length, padding='post', truncating='post')
-        
-        predictions = self.model.predict(X)
-        return predictions
+        if hasattr(self.model, 'predict_proba'):
+            predictions = self.model.predict_proba(texts)
+            return predictions
+        else:
+            if not hasattr(self, 'vocabulary') or self.vocabulary is None:
+                raise ValueError("Model vocabulary not loaded")
+            
+            processed_texts = []
+            for text in texts:
+                from preprocessor import TextPreprocessor
+                preprocessor = TextPreprocessor()
+                processed_texts.append(preprocessor.preprocess_text(text))
+            
+            sequences = []
+            for text in processed_texts:
+                sequence = []
+                words = text.split()
+                for word in words:
+                    sequence.append(self.vocabulary.get(word, self.vocabulary['<UNK>']))
+                sequences.append(sequence)
+            
+            X = pad_sequences(sequences, maxlen=self.max_sequence_length, padding='post', truncating='post')
+            
+            predictions = self.model.predict(X)
+            return predictions
     
     def predict_class(self, texts):
         predictions = self.predict(texts)
@@ -230,8 +238,38 @@ class HateSpeechDetector:
             pickle.dump(self.vocabulary, f)
     
     def load_model(self, filepath):
-        self.model = models.load_model(filepath)
-        
+        if filepath.endswith('.pkl'):
+            self.load_pickle_model(filepath)
+        else:
+            self.model = models.load_model(filepath)
+            
+            import pickle
+            vocab_file = filepath.replace('.h5', '_vocab.pkl')
+            if os.path.exists(vocab_file):
+                with open(vocab_file, 'rb') as f:
+                    self.vocabulary = pickle.load(f)
+    
+    def load_pickle_model(self, filepath):
         import pickle
-        with open(filepath.replace('.h5', '_vocab.pkl'), 'rb') as f:
-            self.vocabulary = pickle.load(f) 
+        try:
+            with open(filepath, 'rb') as f:
+                saved_data = pickle.load(f)
+            
+            if hasattr(saved_data, 'predict_proba'):
+                self.model = saved_data
+                return
+            elif isinstance(saved_data, dict):
+                if 'model' in saved_data:
+                    self.model = saved_data['model']
+                if 'vocabulary' in saved_data:
+                    self.vocabulary = saved_data['vocabulary']
+                elif 'vocab' in saved_data:
+                    self.vocabulary = saved_data['vocab']
+                else:
+                    raise ValueError("No vocabulary found in pickle file")
+            else:
+                self.model = saved_data
+                raise ValueError("No vocabulary found in pickle file")
+                
+        except Exception as e:
+            raise ValueError(f"Error loading pickle model: {e}") 

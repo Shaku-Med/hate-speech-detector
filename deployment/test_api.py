@@ -3,7 +3,7 @@ import json
 import time
 
 def test_api():
-    base_url = "http://localhost:5000"
+    base_url = "http://localhost:8000"
     
     print("Testing Hate Speech Detection API...")
     

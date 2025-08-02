@@ -1,32 +1,47 @@
 import re
 import string
-import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-from nltk.stem import WordNetLemmatizer
 import pandas as pd
 import numpy as np
 
 try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt')
-
-try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('stopwords')
-
-try:
-    nltk.data.find('corpora/wordnet')
-except LookupError:
-    nltk.download('wordnet')
+    import nltk
+    from nltk.corpus import stopwords
+    from nltk.tokenize import word_tokenize
+    from nltk.stem import WordNetLemmatizer
+    
+    try:
+        nltk.data.find('tokenizers/punkt')
+    except LookupError:
+        nltk.download('punkt')
+    
+    try:
+        nltk.data.find('corpora/stopwords')
+    except LookupError:
+        nltk.download('stopwords')
+    
+    try:
+        nltk.data.find('corpora/wordnet')
+    except LookupError:
+        nltk.download('wordnet')
+    
+    NLTK_AVAILABLE = True
+except Exception:
+    NLTK_AVAILABLE = False
 
 class TextPreprocessor:
     def __init__(self):
-        self.stop_words = set(stopwords.words('english'))
-        self.lemmatizer = WordNetLemmatizer()
         self.punctuation = string.punctuation
+        
+        if NLTK_AVAILABLE:
+            try:
+                self.stop_words = set(stopwords.words('english'))
+                self.lemmatizer = WordNetLemmatizer()
+            except:
+                self.stop_words = set()
+                self.lemmatizer = None
+        else:
+            self.stop_words = set()
+            self.lemmatizer = None
         
     def clean_text(self, text):
         if pd.isna(text) or text == '':
@@ -41,15 +56,30 @@ class TextPreprocessor:
         
         return text
     
+    def simple_tokenize(self, text):
+        return text.split()
+    
     def remove_stopwords(self, text):
-        words = word_tokenize(text)
-        filtered_words = [word for word in words if word.lower() not in self.stop_words]
-        return ' '.join(filtered_words)
+        if NLTK_AVAILABLE and self.stop_words:
+            try:
+                words = word_tokenize(text)
+                filtered_words = [word for word in words if word.lower() not in self.stop_words]
+                return ' '.join(filtered_words)
+            except:
+                return text
+        else:
+            return text
     
     def lemmatize_text(self, text):
-        words = word_tokenize(text)
-        lemmatized_words = [self.lemmatizer.lemmatize(word) for word in words]
-        return ' '.join(lemmatized_words)
+        if NLTK_AVAILABLE and self.lemmatizer:
+            try:
+                words = word_tokenize(text)
+                lemmatized_words = [self.lemmatizer.lemmatize(word) for word in words]
+                return ' '.join(lemmatized_words)
+            except:
+                return text
+        else:
+            return text
     
     def preprocess_text(self, text):
         text = self.clean_text(text)
