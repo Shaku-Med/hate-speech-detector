@@ -1,4 +1,5 @@
-flask
+fastapi
+uvicorn
 numpy
 pandas
 scikit-learn
@@ -12,9 +13,6 @@ seaborn
 requests
 joblib
 pickle-mixin
-gunicorn
-werkzeug
-jinja2
-click
-itsdangerous
-markupsafe
+pydantic
+starlette
+python-multipart
