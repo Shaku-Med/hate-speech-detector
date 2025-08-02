@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: hate-speech-detector-api
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements-simple.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.16
+      - key: PORT
+        value: 10000
+    healthCheckPath: /health
+    autoDeploy: true 
