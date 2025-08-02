@@ -227,7 +227,6 @@ yarn-debug.log*
 yarn-error.log*
 
 # TensorFlow.js model files
-*.json
 *.bin
 
 # Browser model files
